@@ -1,0 +1,3 @@
+[submodule "submodules/libUnit"]
+	path = submodules/libUnit
+	url = https://github.com/TheDiamondProject/libUnit.git

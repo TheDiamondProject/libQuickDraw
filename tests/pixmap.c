@@ -26,7 +26,7 @@
 
 TEST_CASE(PixMap, ParseResourceData)
 {
-    struct buffer *pm_buffer = buffer_open("tests/test.pixmap");
+    struct qd_buffer *pm_buffer = qd_buffer_open("tests/test.pixmap");
     struct qd_pixmap *pm = NULL;
     int err = qd_pixmap_parse(&pm, pm_buffer);
 
@@ -48,7 +48,7 @@ TEST_CASE(PixMap, ParseResourceData)
     ASSERT_EQ(pm->pixel_format, 0);
 
     qd_pixmap_free(pm);
-    buffer_free(pm_buffer);
+    qd_buffer_free(pm_buffer);
 }
 
 #endif

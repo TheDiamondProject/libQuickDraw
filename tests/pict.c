@@ -26,7 +26,7 @@
 
 TEST_CASE(PICT, ParseResourceData)
 {
-    struct buffer *pm_buffer = buffer_open("tests/test.pict");
+    struct qd_buffer *pm_buffer = qd_buffer_open("tests/test.pict");
 
     struct qd_pict *pict = NULL;
     int err = qd_pict_parse(&pict, pm_buffer);
@@ -47,7 +47,7 @@ TEST_CASE(PICT, ParseResourceData)
     ASSERT_EQ(pict->pm->bounds.right, 126);
 
     qd_pict_free(pict);
-    buffer_free(pm_buffer);
+    qd_buffer_free(pm_buffer);
 }
 
 #endif

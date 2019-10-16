@@ -37,7 +37,7 @@ struct qd_pict
 	void *surface;
 };
 
-int qd_pict_parse(struct qd_pict **out_pict, struct buffer *restrict buffer);
+int qd_pict_parse(struct qd_pict **out_pict, struct qd_buffer *restrict buffer);
 void qd_pict_free(struct qd_pict *pm);
 
 #endif

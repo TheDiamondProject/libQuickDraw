@@ -26,7 +26,7 @@
 
 TEST_CASE(ColorTable, ParseResourceData)
 {
-    struct buffer *clut_buffer = buffer_open("tests/test.clut");
+    struct qd_buffer *clut_buffer = qd_buffer_open("tests/test.clut");
     struct qd_color_table *clut = qd_color_table_parse(clut_buffer);
 
     // Check the number of colors defined in the Color Table.
@@ -48,7 +48,7 @@ TEST_CASE(ColorTable, ParseResourceData)
     ASSERT_EQ(clut->ct_table[2].rgb.blue, 0x0000);
 
     qd_color_table_free(clut);
-    buffer_free(clut_buffer);
+    qd_buffer_free(clut_buffer);
 }
 
 #endif

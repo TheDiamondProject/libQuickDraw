@@ -25,7 +25,7 @@
 #if !defined(libQuickDraw_ColorType)
 #define libQuickDraw_ColorType
 
-struct qd_color_table *qd_color_table_parse(struct buffer *restrict buffer);
+struct qd_color_table *qd_color_table_parse(struct qd_buffer *restrict buffer);
 void qd_color_table_free(struct qd_color_table *color_table);
 
 #endif

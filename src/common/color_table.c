@@ -22,21 +22,21 @@
 #include <stdlib.h>
 #include "common/color_table.h"
 
-struct qd_color_table *qd_color_table_parse(struct buffer *restrict buffer)
+struct qd_color_table *qd_color_table_parse(struct qd_buffer *restrict buffer)
 {
     struct qd_color_table *color_table = calloc(1, sizeof(*color_table));
 
-    if (buffer_read(&color_table->ct_seed, sizeof(uint32_t), 1, buffer) != 1) {
+    if (qd_buffer_read(&color_table->ct_seed, sizeof(uint32_t), 1, buffer) != 1) {
         fprintf(stderr, "Failed to read color table seed.\n");
         goto ERROR;
     }
 
-    if (buffer_read(&color_table->ct_flags, sizeof(short), 1, buffer) != 1) {
+    if (qd_buffer_read(&color_table->ct_flags, sizeof(short), 1, buffer) != 1) {
         fprintf(stderr, "Failed to read color table flags.\n");
         goto ERROR;
     }
 
-    if (buffer_read(&color_table->ct_size, sizeof(short), 1, buffer) != 1) {
+    if (qd_buffer_read(&color_table->ct_size, sizeof(short), 1, buffer) != 1) {
         fprintf(stderr, "Failed to read color table size.\n");
         goto ERROR;
     }
@@ -45,25 +45,25 @@ struct qd_color_table *qd_color_table_parse(struct buffer *restrict buffer)
     color_table->ct_table = calloc(color_table->ct_size + 1, sizeof(*color_table->ct_table));
     for (int i = 0; i <= color_table->ct_size; ++i) {
         // Read the pixel value
-        if (buffer_read(&color_table->ct_table[i].value, sizeof(unsigned short), 1, buffer) != 1) {
+        if (qd_buffer_read(&color_table->ct_table[i].value, sizeof(unsigned short), 1, buffer) != 1) {
             fprintf(stderr, "Failed to read color table entry (pixel value).\n");
             goto ERROR;
         }
 
         // Read the pixel red value
-        if (buffer_read(&color_table->ct_table[i].rgb.red, sizeof(unsigned short), 1, buffer) != 1) {
+        if (qd_buffer_read(&color_table->ct_table[i].rgb.red, sizeof(unsigned short), 1, buffer) != 1) {
             fprintf(stderr, "Failed to read color table entry (red value).\n");
             goto ERROR;
         }
 
         // Read the pixel green value
-        if (buffer_read(&color_table->ct_table[i].rgb.green, sizeof(unsigned short), 1, buffer) != 1) {
+        if (qd_buffer_read(&color_table->ct_table[i].rgb.green, sizeof(unsigned short), 1, buffer) != 1) {
             fprintf(stderr, "Failed to read color table entry (green value).\n");
             goto ERROR;
         }
 
         // Read the pixel blue value
-        if (buffer_read(&color_table->ct_table[i].rgb.blue, sizeof(unsigned short), 1, buffer) != 1) {
+        if (qd_buffer_read(&color_table->ct_table[i].rgb.blue, sizeof(unsigned short), 1, buffer) != 1) {
             fprintf(stderr, "Failed to read color table entry (blue value).\n");
             goto ERROR;
         }

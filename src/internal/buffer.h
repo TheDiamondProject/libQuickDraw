@@ -30,45 +30,45 @@
 
 enum
 {
-    f_none = 0x00,
-    f_endian = 0x01,
+    qd_f_none = 0x00,
+    qd_f_endian = 0x01,
 };
 
-struct buffer
+struct qd_buffer
 {
     void *data;
     uint64_t pos;
     uint64_t size;
 };
 
-struct buffer *buffer_open(const char *restrict path);
-struct buffer *buffer_create(void *data, uint64_t size);
-struct buffer *buffer_create_empty(uint64_t size);
-void buffer_free(struct buffer *buffer);
+struct qd_buffer *qd_buffer_open(const char *restrict path);
+struct qd_buffer *qd_buffer_create(void *data, uint64_t size);
+struct qd_buffer *qd_buffer_create_empty(uint64_t size);
+void qd_buffer_free(struct qd_buffer *buffer);
 
-int buffer_eof(struct buffer *restrict stream);
-void buffer_seek(struct buffer *stream, long offset, int whence);
-long buffer_tell(struct buffer *restrict stream);
+int qd_buffer_eof(struct qd_buffer *restrict stream);
+void qd_buffer_seek(struct qd_buffer *stream, long offset, int whence);
+long qd_buffer_tell(struct qd_buffer *restrict stream);
 
-size_t buffer_read_flags(
+size_t qd_buffer_read_flags(
     void *restrict ptr, 
     size_t size, 
     size_t nitems,
     int flags,
-    struct buffer *restrict stream
+    struct qd_buffer *restrict stream
 );
 
-size_t buffer_read(
+size_t qd_buffer_read(
     void *restrict ptr, 
     size_t size, 
     size_t nitems,
-    struct buffer *restrict stream
+    struct qd_buffer *restrict stream
 );
 
-size_t buffer_read_fixed(
+size_t qd_buffer_read_fixed(
     void *restrict ptr,
     size_t nitems,
-    struct buffer *restrict stream
+    struct qd_buffer *restrict stream
 );
 
 #endif

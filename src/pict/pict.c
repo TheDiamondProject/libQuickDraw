@@ -46,12 +46,12 @@ enum qd_pict_opcode
 
 // MARK: - Picture Parser
 
-static inline int qd_pict_read_pict_rect(struct qd_rect *rect, struct buffer *restrict buffer)
+static inline int qd_pict_read_pict_rect(struct qd_rect *rect, struct qd_buffer *restrict buffer)
 {
 	// a "PICT rect" is encoded differently. It is (x, y, width, height). Read these values and
 	// encode to a standard qd_rect (top, left, bottom, right).
 	int16_t values[4];
-	if (buffer_read(values, sizeof(int16_t), 4, buffer) != 4) {
+	if (qd_buffer_read(values, sizeof(int16_t), 4, buffer) != 4) {
 		fprintf(stderr, "Failed to read PICT rect from PICT.\n");
 		return 1;
 	}
@@ -64,13 +64,13 @@ static inline int qd_pict_read_pict_rect(struct qd_rect *rect, struct buffer *re
 	return 0;
 }
 
-static inline int qd_read_opcode(uint16_t *opcode, struct buffer *restrict buffer)
+static inline int qd_read_opcode(uint16_t *opcode, struct qd_buffer *restrict buffer)
 {
-	long pos = buffer_tell(buffer);
+	long pos = qd_buffer_tell(buffer);
 	pos += pos % sizeof(uint16_t);
-	buffer_seek(buffer, pos, SEEK_SET);
+	qd_buffer_seek(buffer, pos, SEEK_SET);
 
-	if (buffer_read(opcode, sizeof(uint16_t), 1, buffer) != 1) {
+	if (qd_buffer_read(opcode, sizeof(uint16_t), 1, buffer) != 1) {
 		fprintf(stderr, "Failed to read PICT opcode, returning EOF..\n");
 		return 1;
 	}
@@ -78,15 +78,15 @@ static inline int qd_read_opcode(uint16_t *opcode, struct buffer *restrict buffe
 	return 0;
 }
 
-static inline int qd_pict_read_region(struct qd_pict *pict, struct qd_rect *rect, struct buffer *restrict buffer)
+static inline int qd_pict_read_region(struct qd_pict *pict, struct qd_rect *rect, struct qd_buffer *restrict buffer)
 {
 	uint16_t size = 0;
-	if (buffer_read(&size, sizeof(uint16_t), 1, buffer) != 1) {
+	if (qd_buffer_read(&size, sizeof(uint16_t), 1, buffer) != 1) {
 		fprintf(stderr, "Failed to read the size of a clip region in PICT.\n");
 		return 1;
 	}
 
-	if (buffer_read(rect, sizeof(short), 4, buffer) != 4) {
+	if (qd_buffer_read(rect, sizeof(short), 4, buffer) != 4) {
 		fprintf(stderr, "Failed to read the clip region rect in PICT.\n");
 		return 1;
 	}
@@ -97,27 +97,27 @@ static inline int qd_pict_read_region(struct qd_pict *pict, struct qd_rect *rect
 	rect->bottom /= pict->y_ratio;
 
 	uint32_t points = (size - 10) >> 2;
-	buffer_seek(buffer, sizeof(uint16_t) * 2 * points, SEEK_CUR);
+	qd_buffer_seek(buffer, sizeof(uint16_t) * 2 * points, SEEK_CUR);
 
 	return 0;
 }
 
-static inline int qd_pict_read_long_comment(struct buffer *restrict buffer)
+static inline int qd_pict_read_long_comment(struct qd_buffer *restrict buffer)
 {
-	buffer_seek(buffer, 2, SEEK_CUR);
+	qd_buffer_seek(buffer, 2, SEEK_CUR);
 
 	int16_t length = 0;
-	if (buffer_read(&length, sizeof(int16_t), 1, buffer) != 1) {
+	if (qd_buffer_read(&length, sizeof(int16_t), 1, buffer) != 1) {
 		fprintf(stderr, "Failed to read long comment length from PICT.\n");
 		return 1;
 	}
 
-	buffer_seek(buffer, (long)length, SEEK_CUR);
+	qd_buffer_seek(buffer, (long)length, SEEK_CUR);
 
 	return 0;
 }
 
-static inline int qd_pict_read_direct_bits_rect(struct qd_pict *pict, struct buffer *restrict buffer)
+static inline int qd_pict_read_direct_bits_rect(struct qd_pict *pict, struct qd_buffer *restrict buffer)
 {
 	uint8_t tmp8 = 0;
 
@@ -137,7 +137,7 @@ static inline int qd_pict_read_direct_bits_rect(struct qd_pict *pict, struct buf
 		return 1;
 	}
 
-	buffer_seek(buffer, 2L, SEEK_CUR);
+	qd_buffer_seek(buffer, 2L, SEEK_CUR);
 
 	// Verify the type of PixMap. We can only accept certain types for the time being
 	// until support for decoding/rendering other types is added.
@@ -170,7 +170,7 @@ static inline int qd_pict_read_direct_bits_rect(struct qd_pict *pict, struct buf
 	for (uint32_t scanline = 0; scanline < height; ++scanline) {
 		if (pm->row_bytes <= PACK_BITS_THRESHOLD) {
 			// No pack bits compression.
-			if (buffer_read(raw, 1, pm->row_bytes, buffer) != pm->row_bytes) {
+			if (qd_buffer_read(raw, 1, pm->row_bytes, buffer) != pm->row_bytes) {
 				fprintf(stderr, "Failed to read pixel pattern data from PICT buffer (1).\n");
 				goto ERROR;
 			}
@@ -178,14 +178,14 @@ static inline int qd_pict_read_direct_bits_rect(struct qd_pict *pict, struct buf
 		else  {
 			if (pm->row_bytes > 250) {
 				// Pack bits compression is in place, with the length encoded as a short.
-				if (buffer_read(&packed_bytes_count, sizeof(uint16_t), 1, buffer) != 1) {
+				if (qd_buffer_read(&packed_bytes_count, sizeof(uint16_t), 1, buffer) != 1) {
 				  fprintf(stderr, "Failed to read the number of packed bytes in PICT buffer.\n");
 				  goto ERROR;
 				}
 			}
 			else {
 				// Pack bits compression is in place, with the length encoded as a byte.
-				if (buffer_read(&tmp8, sizeof(uint8_t), 1, buffer) != 1) {
+				if (qd_buffer_read(&tmp8, sizeof(uint8_t), 1, buffer) != 1) {
 					fprintf(stderr, "Failed to read the number of packed bytes in PICT buffer.\n");
 					goto ERROR;
 				}
@@ -195,7 +195,7 @@ static inline int qd_pict_read_direct_bits_rect(struct qd_pict *pict, struct buf
 			// Create a temporary buffer to read the packed data into on the stack. Avoid allocation
 			// in a loop!
 			uint8_t packed_data[packed_bytes_count];
-			if (buffer_read(packed_data, 1, packed_bytes_count, buffer) != packed_bytes_count) {
+			if (qd_buffer_read(packed_data, 1, packed_bytes_count, buffer) != packed_bytes_count) {
 				fprintf(stderr, "Failed to read pixel pattern data from PICT buffer (2).\n");
 				goto ERROR;
 			}
@@ -274,7 +274,7 @@ ERROR:
 	return 1;
 }
 
-int qd_pict_parse(struct qd_pict **out_pict, struct buffer *restrict buffer)
+int qd_pict_parse(struct qd_pict **out_pict, struct qd_buffer *restrict buffer)
 {
 	uint16_t tmp16 = 0;
 	uint32_t tmp32 = 0;
@@ -285,15 +285,15 @@ int qd_pict_parse(struct qd_pict **out_pict, struct buffer *restrict buffer)
 		*out_pict = pict;
 	}
 
-	buffer_seek(buffer, 2L, SEEK_SET);
+	qd_buffer_seek(buffer, 2L, SEEK_SET);
 
-	if (buffer_read(&pict->frame, sizeof(int16_t), 4, buffer) != 4) {
+	if (qd_buffer_read(&pict->frame, sizeof(int16_t), 4, buffer) != 4) {
 		fprintf(stderr, "Failed to read PICT frame.\n");
 		goto ERROR;
 	}
 
 	// For now we're looking for Version 2 PICTs. Version 1 PICTs will come later on.
-	if (buffer_read(&tmp32, sizeof(uint32_t), 1, buffer) != 1 && tmp32 != PICT_V2_MAGIC) {
+	if (qd_buffer_read(&tmp32, sizeof(uint32_t), 1, buffer) != 1 && tmp32 != PICT_V2_MAGIC) {
 		fprintf(stderr, "Failed to read PICT Magic Number, or unexpected value encountered.\n");
 		goto ERROR;
 	}
@@ -305,10 +305,10 @@ int qd_pict_parse(struct qd_pict **out_pict, struct buffer *restrict buffer)
 		goto ERROR;
 	}
 
-	if (buffer_read(&tmp32, sizeof(uint32_t), 1, buffer) && ((tmp32 >> 16) != 0xFFFE)) {
+	if (qd_buffer_read(&tmp32, sizeof(uint32_t), 1, buffer) && ((tmp32 >> 16) != 0xFFFE)) {
 		// Standard Header Variant
 		struct qd_fixed_rect rect = { 0 };
-		if (buffer_read_fixed(&rect, 4, buffer) != 4) {
+		if (qd_buffer_read_fixed(&rect, 4, buffer) != 4) {
 			fprintf(stderr, "Failed to read fixed point rect from PICT standard header.\n");
 			goto ERROR;
 		}
@@ -318,10 +318,10 @@ int qd_pict_parse(struct qd_pict **out_pict, struct buffer *restrict buffer)
 	}
 	else {
 		// Extended Header Variant
-		buffer_seek(buffer, 8, SEEK_CUR);
+		qd_buffer_seek(buffer, 8, SEEK_CUR);
 
 		struct qd_rect rect = { 0 };
-		if (buffer_read(&rect, sizeof(short), 4, buffer) != 4) {
+		if (qd_buffer_read(&rect, sizeof(short), 4, buffer) != 4) {
 			fprintf(stderr, "Failed to read rect from PICT extended header.\n");
 			goto ERROR;
 		}
@@ -335,10 +335,10 @@ int qd_pict_parse(struct qd_pict **out_pict, struct buffer *restrict buffer)
 		goto ERROR;
 	}
 
-	buffer_seek(buffer, 4, SEEK_CUR);
+	qd_buffer_seek(buffer, 4, SEEK_CUR);
 
 	// Begin parsing the PICT opcodes
-	while ( buffer_eof(buffer) == 0) {
+	while ( qd_buffer_eof(buffer) == 0) {
 		uint16_t opcode = 0;
 		if (qd_read_opcode(&opcode, buffer)) {
 			fprintf(stderr, "Failed to read opcode from PICT.\n");

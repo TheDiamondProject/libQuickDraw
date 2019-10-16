@@ -21,7 +21,7 @@
 
 #include "internal/buffer.h"
 
-struct buffer *buffer_open(const char *restrict path)
+struct qd_buffer *qd_buffer_open(const char *restrict path)
 {
     FILE *f = fopen(path, "r");
     if (!f) {
@@ -42,12 +42,12 @@ struct buffer *buffer_open(const char *restrict path)
     }
 
     fclose(f);
-    return buffer_create(data, size);
+    return qd_buffer_create(data, size);
 }
 
-struct buffer *buffer_create(void *data, uint64_t size)
+struct qd_buffer *qd_buffer_create(void *data, uint64_t size)
 {
-    struct buffer *buffer = calloc(1, sizeof(*buffer));
+    struct qd_buffer *buffer = calloc(1, sizeof(*buffer));
     if (data == NULL) {
         buffer->data = calloc(size, 1);
     } else {
@@ -57,12 +57,12 @@ struct buffer *buffer_create(void *data, uint64_t size)
     return buffer;
 }
 
-struct buffer *buffer_create_empty(uint64_t size)
+struct qd_buffer *qd_buffer_create_empty(uint64_t size)
 {
-    return buffer_create(NULL, size);
+    return qd_buffer_create(NULL, size);
 }
 
-void buffer_free(struct buffer *buffer)
+void qd_buffer_free(struct qd_buffer *buffer)
 {
     if (buffer) {
         free(buffer->data);
@@ -70,7 +70,7 @@ void buffer_free(struct buffer *buffer)
     }
 }
 
-int buffer_eof(struct buffer *restrict stream)
+int qd_buffer_eof(struct qd_buffer *restrict stream)
 {
     if (!stream) {
         return 0;
@@ -78,7 +78,7 @@ int buffer_eof(struct buffer *restrict stream)
     return (stream->pos >= stream->size);
 }
 
-void buffer_seek(struct buffer *stream, long offset, int whence)
+void qd_buffer_seek(struct qd_buffer *stream, long offset, int whence)
 {
     if (!stream) {
         return;
@@ -99,17 +99,17 @@ void buffer_seek(struct buffer *stream, long offset, int whence)
     }
 }
 
-long buffer_tell(struct buffer *restrict stream)
+long qd_buffer_tell(struct qd_buffer *restrict stream)
 {
     return stream ? stream->pos : 0;
 }
 
-size_t buffer_read_flags(
+size_t qd_buffer_read_flags(
     void *restrict ptr, 
     size_t size, 
     size_t nitems,
     int flags,
-    struct buffer *restrict stream
+    struct qd_buffer *restrict stream
 ) {
     uint8_t *data = stream->data;
 
@@ -118,7 +118,7 @@ size_t buffer_read_flags(
     }
     
     size_t count = 0;
-    while (!buffer_eof(stream) && nitems--) {
+    while (!qd_buffer_eof(stream) && nitems--) {
         // Get a representation that we can work with easily.
         uint8_t *p = (uint8_t *)ptr;
         uint8_t *pp = (uint8_t *)ptr;
@@ -128,7 +128,7 @@ size_t buffer_read_flags(
 
         // Perform the big endian swap. However this is only done
         // on integer values (2, 3, 4 & 8 bytes).
-        if ((flags & f_endian) && ((size >= 2 && size <= 4) || size == 8)) {
+        if ((flags & qd_f_endian) && ((size >= 2 && size <= 4) || size == 8)) {
             for (int i = 0; i < (size >> 1); ++i) {
                 uint8_t tmp = p[size - 1 - i];
                 p[size - 1 - i] = p[i];
@@ -145,23 +145,23 @@ size_t buffer_read_flags(
     return count;
 }
 
-size_t buffer_read(
+size_t qd_buffer_read(
     void *restrict ptr, 
     size_t size, 
     size_t nitems,
-    struct buffer *restrict stream
+    struct qd_buffer *restrict stream
 ) {
-    return buffer_read_flags(ptr, size, nitems, f_endian, stream);
+    return qd_buffer_read_flags(ptr, size, nitems, qd_f_endian, stream);
 }
 
-size_t buffer_read_fixed(
+size_t qd_buffer_read_fixed(
     void *restrict ptr,
     size_t nitems,
-    struct buffer *restrict stream
+    struct qd_buffer *restrict stream
 ) {
     int32_t *buffer = calloc(nitems, sizeof(*buffer));
     double *fixed = ptr;
-    size_t r = buffer_read(buffer, sizeof(*buffer), nitems, stream);
+    size_t r = qd_buffer_read(buffer, sizeof(*buffer), nitems, stream);
     for (int i = 0; i < nitems; ++i) {
     	fixed[i] = buffer[i] / ((double)(1 << 16));
     }

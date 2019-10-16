@@ -25,7 +25,7 @@
 #if !defined(libQuickDraw_PixMap)
 #define libQuickDraw_PixMap
 
-int qd_pixmap_parse(struct qd_pixmap **pm, struct buffer *restrict buffer);
+int qd_pixmap_parse(struct qd_pixmap **pm, struct qd_buffer *restrict buffer);
 void qd_pixmap_free(struct qd_pixmap *pm);
 
 #endif

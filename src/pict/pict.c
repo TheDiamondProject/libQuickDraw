@@ -56,10 +56,10 @@ static inline int qd_pict_read_pict_rect(struct qd_rect *rect, struct qd_buffer 
 		return 1;
 	}
 
-	rect->top = values[1];
-	rect->bottom = values[1] + values[3];
-	rect->left = values[0];
-	rect->right = values[0] + values[2];
+	rect->top = values[0];
+	rect->bottom = values[0] + values[2];
+	rect->left = values[1];
+	rect->right = values[1] + values[3];
 
 	return 0;
 }
@@ -132,8 +132,9 @@ static inline int qd_pict_read_direct_bits_rect(struct qd_pict *pict, struct qd_
 
 	struct qd_rect source_rect = { 0 };
 	struct qd_rect destination_rect = { 0 };
+
 	if (qd_pict_read_pict_rect(&source_rect, buffer) || qd_pict_read_pict_rect(&destination_rect, buffer)) {
-		// Abort if failed to read either of these!
+		// Abort if failed to read either rect!
 		return 1;
 	}
 
@@ -179,8 +180,8 @@ static inline int qd_pict_read_direct_bits_rect(struct qd_pict *pict, struct qd_
 			if (pm->row_bytes > 250) {
 				// Pack bits compression is in place, with the length encoded as a short.
 				if (qd_buffer_read(&packed_bytes_count, sizeof(uint16_t), 1, buffer) != 1) {
-				  fprintf(stderr, "Failed to read the number of packed bytes in PICT buffer.\n");
-				  goto ERROR;
+					fprintf(stderr, "Failed to read the number of packed bytes in PICT buffer.\n");
+					goto ERROR;
 				}
 			}
 			else {
@@ -201,50 +202,53 @@ static inline int qd_pict_read_direct_bits_rect(struct qd_pict *pict, struct qd_
 			}
 
 			if (pm->pack_type == 3) {
-				if (qd_packbits_decode(&raw, packed_data, packed_bytes_count, sizeof(uint16_t)) != raw_size) {
-					fprintf(stderr, "Failed to unpack encoded scanline data from PICT (1).\n");
-					goto ERROR;
-				} 	
+				qd_packbits_decode(&raw, packed_data, packed_bytes_count, sizeof(uint16_t));
 			}
 			else if (pm->pack_type == 4) {
-				if (qd_packbits_decode(&raw, packed_data, packed_bytes_count, sizeof(uint8_t)) != raw_size) {
-					fprintf(stderr, "Failed to unpack encoded scanline data from PICT (2).\n");
-					goto ERROR;
-				} 	
+				qd_packbits_decode(&raw, packed_data, packed_bytes_count, sizeof(uint8_t));	
 			}
 			
 		}
 
 		if (pm->pack_type == 3) {
-			// RGB Formatted Data
 			for (uint32_t x = 0; x < width; ++x) {
-				((uint16_t *)px_buffer)[px_buffer_offset + x] = 0xFF000000
-					| ((raw[x] & 0xFF) << 16)
-					| ((raw[bounds_width + x] & 0xFF) << 8)
-					| (raw[2 * bounds_width + x] & 0xFF);
+                ((uint16_t *)px_buffer)[px_buffer_offset + x] = (uint16_t)(((0xFF & raw[2*x]) << 8) | (0xFF & raw[2*x+1]));
+            }
+		}
+		else {
+			if (pm->cmp_count == 3) {
+				// RGB Formatted Data
+				for (uint32_t x = 0; x < width; ++x) {
+					((uint16_t *)px_buffer)[px_buffer_offset + x] = 0xFF000000
+						| ((raw[x] & 0xFF) << 16)
+						| ((raw[bounds_width + x] & 0xFF) << 8)
+						| (raw[2 * bounds_width + x] & 0xFF);
+				}
+			}
+			else {
+				// ARGB Formatted Data
+				for (uint32_t x = 0; x < width; ++x) {
+					((uint16_t *)px_buffer)[px_buffer_offset + x] =
+					  ((raw[x] & 0xFF) << 24)
+					| ((raw[bounds_width] & 0xFF) << 16)
+					| ((raw[2 * bounds_width + x] & 0xFF) << 8)
+					| (raw[3 * bounds_width + x] & 0xFF);
+				}
 			}
 		}
-		else if (pm->pack_type == 4) {
-			// ARGB Formatted Data
-			for (uint32_t x = 0; x < width; ++x) {
-				((uint16_t *)px_buffer)[px_buffer_offset + x] =
-				  ((raw[x] & 0xFF) << 24)
-				| ((raw[bounds_width] & 0xFF) << 16)
-				| ((raw[2 * bounds_width + x] & 0xFF) << 8)
-				| (raw[3 * bounds_width + x] & 0xFF);
-			}
-		}
+		
+		px_buffer_offset += width;
 	}
 
 	uint32_t source_length = width * height;
-	uint32_t rgb_length = source_length << 2;
-	uint8_t *rgb = calloc(1, sizeof(*rgb));
+	uint32_t rgb_length = source_length * 4;
+	uint8_t *rgb = calloc(rgb_length, sizeof(*rgb));
 
 	if (pm->pack_type == 3) {
 		for (uint32_t p = 0, i = 0; i < source_length; ++i) {
-            rgb[p++] = ((((uint16_t *)px_buffer)[i] & 0x7c00) >> 10) << 3;
-            rgb[p++] = ((((uint16_t *)px_buffer)[i] & 0x03e0) >> 5) << 3;
             rgb[p++] = ((((uint16_t *)px_buffer)[i] & 0x001f) << 3);
+            rgb[p++] = ((((uint16_t *)px_buffer)[i] & 0x03e0) >> 5) << 3;
+            rgb[p++] = ((((uint16_t *)px_buffer)[i] & 0x7c00) >> 10) << 3;
             rgb[p++] = UINT8_MAX;
         }
 	}
@@ -318,10 +322,10 @@ int qd_pict_parse(struct qd_pict **out_pict, struct qd_buffer *restrict buffer)
 	}
 	else {
 		// Extended Header Variant
-		qd_buffer_seek(buffer, 8, SEEK_CUR);
+		qd_buffer_seek(buffer, sizeof(uint32_t) * 2, SEEK_CUR);
 
 		struct qd_rect rect = { 0 };
-		if (qd_buffer_read(&rect, sizeof(short), 4, buffer) != 4) {
+		if (qd_buffer_read(&rect, sizeof(int16_t), 4, buffer) != 4) {
 			fprintf(stderr, "Failed to read rect from PICT extended header.\n");
 			goto ERROR;
 		}

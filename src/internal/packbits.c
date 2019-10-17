@@ -21,51 +21,19 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include "internal/packbits.h"
 
 int qd_packbits_decode(uint8_t **out_data, uint8_t *packed_data, int length, int value_size)
 {
-	uint32_t result_size = 0;
-
-	// We need to do an initial pass through the data to determine how much space 
-	// needs to be allocated for the unpacked data.
-	uint32_t pos = 0;
-	while (pos < length) {
-		uint8_t count = packed_data[pos++];
-		if (count >= 0 && count < 128) {
-			uint8_t run = (1 + count) * value_size;
-			pos += run;
-			result_size += run;
-		}
-		else if (count >= 128) {
-			uint8_t run = 256 - count + 1;
-			pos += value_size;
-			result_size += (run * value_size);
-		}
-		else {
-			// No-op
-		}
-	}
-
 	// We now know how many bytes the unpacked data requires.
-	uint8_t *data;
-
-	if (out_data && *out_data != NULL) {
-		data = *out_data;
-	}
-	else {
-		data = calloc(result_size, sizeof(*data));
-		if (out_data) {
-			*out_data = data;
-		}
-	}
-
-	pos = 0;
+	uint8_t *data = *out_data;
+	uint32_t pos = 0;
 	uint32_t out_pos = 0;
 	while (pos < length) {
 		uint8_t count = packed_data[pos++];
 		if (count >= 0 && count < 128) {
-			uint8_t run = (1 + count) * value_size;
+			uint16_t run = (1 + count) * value_size;
 			memmove(data + out_pos, packed_data + pos, run);
 			pos += run;
 			out_pos += run;
@@ -85,5 +53,5 @@ int qd_packbits_decode(uint8_t **out_data, uint8_t *packed_data, int length, int
 		}
 	}
 
-	return result_size;
+	return out_pos;
 }
